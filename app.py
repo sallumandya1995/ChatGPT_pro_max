@@ -19,11 +19,12 @@ import warnings
 from PIL import Image
 from stability_sdk import client
 import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
-from datetime import datetime
+import datetime
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 import wget
 import urllib.request
+import csv
 
 
 def save_uploadedfile(uploadedfile):
@@ -37,6 +38,16 @@ stability_api = client.StabilityInference(
     # Available engines: stable-diffusion-v1 stable-diffusion-v1-5 stable-diffusion-512-v2-0 stable-diffusion-768-v2-0
     # stable-diffusion-512-v2-1 stable-diffusion-768-v2-1 stable-inpainting-v1-0 stable-inpainting-512-v2-0
 )
+
+header = ["sl. no.", "Input Prompt", "Output", "Date_time"]
+
+def csv_logs(mytext, result, date_time):
+    with open("logs.csv", "r") as file:
+        sl_no = sum(1 for _ in csv.reader(file))
+
+    with open("logs.csv", "a", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow([sl_no, mytext, result, date_time])
 
 def search_internet(question):
     try:    
@@ -63,7 +74,7 @@ def search_internet(question):
         search = GoogleSearch(params)
         results = search.get_dict()
         organic_results = results["organic_results"]
-      
+        
     
         snippets = ""
         counter = 1
@@ -81,8 +92,11 @@ def search_internet(question):
             top_p=1,
             frequency_penalty=0,
             presence_penalty=0)
-    
+
+        now = datetime.datetime.now()
+        date_time = now.strftime("%Y-%m-%d %H:%M:%S")
         string_temp = response.choices[0].text
+        csv_logs(question, string_temp, date_time)
         st.write(string_temp)
         st.write(snippets)
     except:
@@ -128,8 +142,11 @@ def search_internet(question):
                 top_p=1,
                 frequency_penalty=0,
                 presence_penalty=0)
-        
+
+            now = datetime.datetime.now()
+            date_time = now.strftime("%Y-%m-%d %H:%M:%S")
             string_temp = response.choices[0].text
+            csv_logs(question, string_temp, date_time)
             st.write(string_temp)
             st.write(snippets)
         except:
@@ -174,47 +191,17 @@ def search_internet(question):
                 top_p=1,
                 frequency_penalty=0,
                 presence_penalty=0)
-        
+            
+            now = datetime.datetime.now()
+            date_time = now.strftime("%Y-%m-%d %H:%M:%S")
             string_temp = response.choices[0].text
+            csv_logs(question, string_temp, date_time)
             st.write(string_temp)
             st.write(snippets)
         
 
-# openai.api_key = ""
 openai.api_key = st.secrets["OPENAI_KEY"] #os.environ("OPENAI_KEY") #os.environ['OPENAI_KEY']
-date_time = str(datetime.now())
-
-# dictionary = st.secrets("GSHEET_KEY")
-# json_object = json.dumps(dictionary, indent=4)
-
-def g_sheet_log(myinput, output):
-  SERVICE_ACCOUNT_FILE = 'gsheet.json'
-
-  credentials = service_account.Credentials.from_service_account_file(
-      filename=SERVICE_ACCOUNT_FILE
-  )
-
-  service_sheets = build('sheets', 'v4', credentials=credentials)
-
-  GOOGLE_SHEETS_ID = '16cM8lHm7n_X0ZVLgWfL5fcBhvKWIGO9LQz3zCl2Dn_8'
-  worksheet_name = 'Prompt_Logs!'
-  cell_range_insert = 'A:C'
-
-  values = (
-      (myinput, output, date_time),
-  )
-
-  value_range_body = {
-      'majorDimension' : 'ROWS',
-      'values' : values
-  }
-
-  service_sheets.spreadsheets().values().append(
-      spreadsheetId=GOOGLE_SHEETS_ID,
-      valueInputOption='USER_ENTERED',
-      range=worksheet_name + cell_range_insert,
-      body=value_range_body
-  ).execute()
+# date_time = str(datetime.now())
 
 openai.api_key = st.secrets["OPENAI_KEY"]
 
@@ -255,15 +242,14 @@ Input_type = st.radio(
     )
 
 if Input_type == 'TEXT':
-    st.write('**You are now in Text input mode**')
     mytext = st.text_input('**Go on! Ask me anything:**')
     if st.button("SUBMIT"):
         question=mytext
         response = openai.Completion.create(
           model="text-davinci-003",
           prompt=f'''Your name is HyperBot and  knowledge cutoff date is 2021-09, and you are not aware of any events after that time. if the  
-                    Answer to following questions is not from your knowledge base or in case of queries like weather 
-                      updates / stock updates / current news or people which requires you to have internet connection  then print i don't have access to internet to answer your question, 
+                    Answer to following questions is not from your knowledge base or in case of queries like date, time, weather 
+                      updates / stock updates / current affairs / news or people which requires you to have internet connection  then print i don't have access to internet to answer your question, 
                       if  question is related to  image or  painting or drawing generation then print ipython type output function gen_draw("detailed prompt of image to be generated")
                       if the question is related to playing a song or video or music of a singer then print ipython type output  function vid_tube("relevent search query")
                       if the question is related to operating home appliances then print ipython type output function home_app(" action(ON/Off),appliance(TV,Geaser,Fridge,Lights,fans,AC)") . 
@@ -285,13 +271,17 @@ if Input_type == 'TEXT':
                     img2 = Image.open(wget.download(openai_response(prompt)))
                     img2.show()
                     rx = 'Image returned'
-                    g_sheet_log(mytext, rx)
+                    now = datetime.datetime.now()
+                    date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+                    csv_logs(mytext, rx, date_time)
                 except:
                     urllib.request.urlretrieve(openai_response(prompt),"img_ret.png")
                     img = Image.open("img_ret.png")
                     img.show()
                     rx = 'Image returned'
-                    g_sheet_log(mytext, rx)
+                    now = datetime.datetime.now()
+                    date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+                    csv_logs(mytext, rx, date_time)
             except:
                 # Set up our initial generation parameters.
                 answers = stability_api.generate(
@@ -311,8 +301,6 @@ if Input_type == 'TEXT':
                                                     # (Available Samplers: ddim, plms, k_euler, k_euler_ancestral, k_heun, k_dpm_2, k_dpm_2_ancestral, k_dpmpp_2s_ancestral, k_lms, k_dpmpp_2m)
                 )
 
-                # Set up our warning to print to the console if the adult content classifier is tripped.
-                # If adult content classifier is not tripped, save generated images.
                 for resp in answers:
                     for artifact in resp.artifacts:
                         if artifact.finish_reason == generation.FILTER:
@@ -324,27 +312,9 @@ if Input_type == 'TEXT':
                             st.image(img)
                             img.save(str(artifact.seed)+ ".png") # Save our generated images with their seed number as the filename.
                             rx = 'Image returned'
-                            g_sheet_log(mytext, rx)
+                            # g_sheet_log(mytext, rx)
+                            csv_logs(mytext, rx, date_time)
                             
-            # except:        
-            #     st.write('image is being generated please wait...')
-            #     def extract_image_description(input_string):
-            #         return input_string.split('gen_draw("')[1].split('")')[0]
-            #     prompt=extract_image_description(string_temp)
-            #     # model_id = "CompVis/stable-diffusion-v1-4"
-            #     model_id='runwayml/stable-diffusion-v1-5'
-            #     device = "cuda"
-
-
-            #     pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
-            #     pipe = pipe.to(device)
-
-            #     # prompt = "a photo of an astronaut riding a horse on mars"
-            #     image = pipe(prompt).images[0]  
-                
-            #     image.save("astronaut_rides_horse.png")
-            #     st.image(image)
-            #     # image
 
         elif ("vid_tube" in string_temp):
             s = Search(mytext)
@@ -358,19 +328,26 @@ if Input_type == 'TEXT':
             OurURL = YoutubeURL + video_id
             st.write(OurURL)
             st_player(OurURL)
+            now = datetime.datetime.now()
+            date_time = now.strftime("%Y-%m-%d %H:%M:%S")
             ry = 'Youtube link and video returned'
-            g_sheet_log(mytext, ry)
+            # g_sheet_log(mytext, ry)
+            csv_logs(mytext, ry, date_time)
 
         elif ("don't" in string_temp or "internet" in string_temp):
             st.write('searching internet ')
             search_internet(question)
-            rz = 'Internet result returned'
-            g_sheet_log(mytext, string_temp)
+            # rz = 'Internet result returned'
+            # g_sheet_log(mytext, string_temp)
+            # csv_logs(mytext, rz, date_time)
 
         else:
             st.write(string_temp)
-            g_sheet_log(mytext, string_temp)
-
+            # g_sheet_log(mytext, string_temp)
+            now = datetime.datetime.now()
+            date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+            csv_logs(mytext, string_temp, date_time)
+            
 elif Input_type == 'SPEECH':
     option_speech = st.selectbox(
     'Choose from below: (Options for Transcription)',
@@ -409,15 +386,18 @@ elif Input_type == 'SPEECH':
         if result:
             if "GET_TEXT" in result:
                 question = result.get("GET_TEXT")
+                st.text(question)
                 response = openai.Completion.create(
                 model="text-davinci-003",
-                prompt=f'''Your knowledge cutoff is 2021-09, and it is not aware of any events after that time. if the  
-                          Answer to following questions is not  from your knowledge base or in case of queries like weather 
-                            updates / stock updates / current news Etc which requires you to have internet connection  then print i don't have access to internet to answer your question, 
-                            if  question is related to  image or  painting or drawing generation then print ipython type output   function gen_draw("detailed prompt of image to be generated")
-                            if the question is related to playing a song or video or music of a singer then print ipython type output  function vid_tube("relevent search query")
-                            \nQuestion-{question}
-                            \nAnswer -''',
+                prompt=f'''Your name is HyperBot and  knowledge cutoff date is 2021-09, and you are not aware of any events after that time. if the  
+                    Answer to following questions is not from your knowledge base or in case of queries like date, time, weather 
+                      updates / stock updates / current affairs / news or people which requires you to have internet connection  then print i don't have access to internet to answer your question, 
+                      if  question is related to  image or  painting or drawing generation then print ipython type output function gen_draw("detailed prompt of image to be generated")
+                      if the question is related to playing a song or video or music of a singer then print ipython type output  function vid_tube("relevent search query")
+                      if the question is related to operating home appliances then print ipython type output function home_app(" action(ON/Off),appliance(TV,Geaser,Fridge,Lights,fans,AC)") . 
+                      if question is realted to sending mail or sms then print ipython type output function messenger_app(" message of us ,messenger(email,sms)")
+                      \nQuestion-{question}
+                      \nAnswer -''',
                 temperature=0.49,
                 max_tokens=256,
                 top_p=1,
@@ -427,24 +407,56 @@ elif Input_type == 'SPEECH':
                 string_temp=response.choices[0].text
     
                 if ("gen_draw" in string_temp):
-                    st.write('*image is being generated please wait..* ')
-                    def extract_image_description(input_string):
-                        return input_string.split('gen_draw("')[1].split('")')[0]
-                    prompt=extract_image_description(string_temp)
-                    # model_id = "CompVis/stable-diffusion-v1-4"
-                    model_id='runwayml/stable-diffusion-v1-5'
-                    device = "cuda"
-    
-                    pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
-                    pipe = pipe.to(device)
-    
-                    # prompt = "a photo of an astronaut riding a horse on mars"
-                    image = pipe(prompt).images[0]  
-                      
-                    image.save("astronaut_rides_horse.png")
-                    st.image(image)
-                    # image 
-                
+                    try:
+                        try:
+                            wget.download(openai_response(prompt))
+                            img2 = Image.open(wget.download(openai_response(prompt)))
+                            img2.show()
+                            rx = 'Image returned'
+                            now = datetime.datetime.now()
+                            date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+                            csv_logs(mytext, rx, date_time)
+                        except:
+                            urllib.request.urlretrieve(openai_response(prompt),"img_ret.png")
+                            img = Image.open("img_ret.png")
+                            img.show()
+                            rx = 'Image returned'
+                            now = datetime.datetime.now()
+                            date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+                            csv_logs(mytext, rx, date_time)
+                    except:
+                        # Set up our initial generation parameters.
+                        answers = stability_api.generate(
+                        prompt = mytext,
+                        seed=992446758, # If a seed is provided, the resulting generated image will be deterministic.
+                                # What this means is that as long as all generation parameters remain the same, you can always recall the same image simply by generating it again.
+                                # Note: This isn't quite the case for Clip Guided generations, which we'll tackle in a future example notebook.
+                        steps=30, # Amount of inference steps performed on image generation. Defaults to 30.
+                        cfg_scale=8.0, # Influences how strongly your generation is guided to match your prompt.
+                            # Setting this value higher increases the strength in which it tries to match your prompt.
+                            # Defaults to 7.0 if not specified.
+                        width=512, # Generation width, defaults to 512 if not included.
+                        height=512, # Generation height, defaults to 512 if not included.
+                        samples=1, # Number of images to generate, defaults to 1 if not included.
+                        sampler=generation.SAMPLER_K_DPMPP_2M # Choose which sampler we want to denoise our generation with.
+                                                            # Defaults to k_dpmpp_2m if not specified. Clip Guidance only supports ancestral samplers.
+                                                            # (Available Samplers: ddim, plms, k_euler, k_euler_ancestral, k_heun, k_dpm_2, k_dpm_2_ancestral, k_dpmpp_2s_ancestral, k_lms, k_dpmpp_2m)
+                        )
+            
+                        for resp in answers:
+                            for artifact in resp.artifacts:
+                                if artifact.finish_reason == generation.FILTER:
+                                    warnings.warn(
+                                        "Your request activated the API's safety filters and could not be processed."
+                                        "Please modify the prompt and try again.")
+                                if artifact.type == generation.ARTIFACT_IMAGE:
+                                    img = Image.open(io.BytesIO(artifact.binary))
+                                    st.image(img)
+                                    img.save(str(artifact.seed)+ ".png") # Save our generated images with their seed number as the filename.
+                                    rx = 'Image returned'
+                                    # g_sheet_log(mytext, rx)
+                                    csv_logs(mytext, rx, date_time)
+                    
                 elif ("vid_tube" in string_temp):
                     s = Search(question)
                     search_res = s.results
@@ -457,12 +469,22 @@ elif Input_type == 'SPEECH':
                     OurURL = YoutubeURL + video_id
                     st.write(OurURL)
                     st_player(OurURL)
+                    now = datetime.datetime.now()
+                    date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+                    ry = 'Youtube link and video returned'
+                    # g_sheet_log(mytext, ry)
+                    csv_logs(mytext, ry, date_time)
+
     
                 elif ("don't" in string_temp or "internet" in string_temp  ):
                     st.write('*searching internet*')
                     search_internet(question)
                 else:
                     st.write(string_temp)
+                    now = datetime.datetime.now()
+                    date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+                    csv_logs(mytext, string_temp, date_time)
+
 
     elif option_speech == 'OpenAI Whisper (Upload audio file)':
         audio_file = st.file_uploader("Upload Audio file",type=['wav', 'mp3'])
@@ -475,13 +497,15 @@ elif Input_type == 'SPEECH':
             question = result
             response = openai.Completion.create(
             model="text-davinci-003",
-            prompt=f'''Your knowledge cutoff is 2021-09, and it is not aware of any events after that time. if the  
-                      Answer to following questions is not  from your knowledge base or in case of queries like weather 
-                        updates / stock updates / current news Etc which requires you to have internet connection  then print i don't have access to internet to answer your question, 
-                        if  question is related to  image or  painting or drawing generation then print ipython type output   function gen_draw("detailed prompt of image to be generated")
-                        if the question is related to playing a song or video or music of a singer then print ipython type output  function vid_tube("relevent search query")
-                        \nQuestion-{question}
-                        \nAnswer -''',
+            prompt=f'''Your name is HyperBot and  knowledge cutoff date is 2021-09, and you are not aware of any events after that time. if the  
+                    Answer to following questions is not from your knowledge base or in case of queries like date, time, weather 
+                      updates / stock updates / current affairs / news or people which requires you to have internet connection  then print i don't have access to internet to answer your question, 
+                      if  question is related to  image or  painting or drawing generation then print ipython type output function gen_draw("detailed prompt of image to be generated")
+                      if the question is related to playing a song or video or music of a singer then print ipython type output  function vid_tube("relevent search query")
+                      if the question is related to operating home appliances then print ipython type output function home_app(" action(ON/Off),appliance(TV,Geaser,Fridge,Lights,fans,AC)") . 
+                      if question is realted to sending mail or sms then print ipython type output function messenger_app(" message of us ,messenger(email,sms)")
+                      \nQuestion-{question}
+                      \nAnswer -''',
             temperature=0.49,
             max_tokens=256,
             top_p=1,
@@ -492,23 +516,56 @@ elif Input_type == 'SPEECH':
             string_temp=response.choices[0].text
 
             if ("gen_draw" in string_temp):
-                st.write('*image is being generated please wait..* ')
-                def extract_image_description(input_string):
-                    return input_string.split('gen_draw("')[1].split('")')[0]
-                prompt=extract_image_description(string_temp)
-                # model_id = "CompVis/stable-diffusion-v1-4"
-                model_id='runwayml/stable-diffusion-v1-5'
-                device = "cuda"
-
-                pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
-                pipe = pipe.to(device)
-
-                # prompt = "a photo of an astronaut riding a horse on mars"
-                image = pipe(prompt).images[0]  
-                  
-                image.save("astronaut_rides_horse.png")
-                st.image(image)
-                # image 
+                try:
+                    try:
+                        wget.download(openai_response(prompt))
+                        img2 = Image.open(wget.download(openai_response(prompt)))
+                        img2.show()
+                        rx = 'Image returned'
+                        now = datetime.datetime.now()
+                        date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+                        csv_logs(mytext, rx, date_time)
+                    except:
+                        urllib.request.urlretrieve(openai_response(prompt),"img_ret.png")
+                        img = Image.open("img_ret.png")
+                        img.show()
+                        rx = 'Image returned'
+                        now = datetime.datetime.now()
+                        date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+                        csv_logs(mytext, rx, date_time)
+                except:
+                    # Set up our initial generation parameters.
+                    answers = stability_api.generate(
+                    prompt = mytext,
+                    seed=992446758, # If a seed is provided, the resulting generated image will be deterministic.
+                            # What this means is that as long as all generation parameters remain the same, you can always recall the same image simply by generating it again.
+                            # Note: This isn't quite the case for Clip Guided generations, which we'll tackle in a future example notebook.
+                    steps=30, # Amount of inference steps performed on image generation. Defaults to 30.
+                    cfg_scale=8.0, # Influences how strongly your generation is guided to match your prompt.
+                        # Setting this value higher increases the strength in which it tries to match your prompt.
+                        # Defaults to 7.0 if not specified.
+                    width=512, # Generation width, defaults to 512 if not included.
+                    height=512, # Generation height, defaults to 512 if not included.
+                    samples=1, # Number of images to generate, defaults to 1 if not included.
+                    sampler=generation.SAMPLER_K_DPMPP_2M # Choose which sampler we want to denoise our generation with.
+                                                        # Defaults to k_dpmpp_2m if not specified. Clip Guidance only supports ancestral samplers.
+                                                        # (Available Samplers: ddim, plms, k_euler, k_euler_ancestral, k_heun, k_dpm_2, k_dpm_2_ancestral, k_dpmpp_2s_ancestral, k_lms, k_dpmpp_2m)
+                    )
+    
+                    for resp in answers:
+                        for artifact in resp.artifacts:
+                            if artifact.finish_reason == generation.FILTER:
+                                warnings.warn(
+                                    "Your request activated the API's safety filters and could not be processed."
+                                    "Please modify the prompt and try again.")
+                            if artifact.type == generation.ARTIFACT_IMAGE:
+                                img = Image.open(io.BytesIO(artifact.binary))
+                                st.image(img)
+                                img.save(str(artifact.seed)+ ".png") # Save our generated images with their seed number as the filename.
+                                rx = 'Image returned'
+                                # g_sheet_log(mytext, rx)
+                                csv_logs(mytext, rx, date_time)
+ 
             
             elif ("vid_tube" in string_temp):
                 s = Search(question)
@@ -522,11 +579,20 @@ elif Input_type == 'SPEECH':
                 OurURL = YoutubeURL + video_id
                 st.write(OurURL)
                 st_player(OurURL)
+                now = datetime.datetime.now()
+                date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+                ry = 'Youtube link and video returned'
+                # g_sheet_log(mytext, ry)
+                csv_logs(mytext, ry, date_time)
 
             elif ("don't" in string_temp or "internet" in string_temp  ):
                 st.write('*searching internet*')
                 search_internet(question)
             else:
                 st.write(string_temp)
+                now = datetime.datetime.now()
+                date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+                csv_logs(mytext, string_temp, date_time)
+
 else:
     pass
