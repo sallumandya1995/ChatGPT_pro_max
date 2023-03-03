@@ -16,10 +16,10 @@
 7. Create or compose tweets or Linkedin posts or email.
 
 ## Working:
-### 1. Opening page:
+### **1. Opening page:**
 [![image.png](https://i.postimg.cc/90ZfTW92/image.png)](https://postimg.cc/kRM9PPwY)
-
-### 2. Text Search:
+-----------------------------------------------------------------------------------------
+### **2. Text Search:**
 **A. Concepts/Facts/Theorems/Static General Knowledge:**
 
 [![image.png](https://i.postimg.cc/nh568q5d/image.png)](https://postimg.cc/753B0Jq7)
@@ -35,3 +35,15 @@
 **C. Songs/Videos from Youtube:**
 
 [![image.png](https://i.postimg.cc/26zNkhdn/image.png)](https://postimg.cc/gwBT4wT0)
+-----------------------------------------------------------------------------------------
+### **3. Voice Search/Audio Transcription:**
+**A. OpenAI Whisper: (Using pre-recorded audio)**
+
+[![image.png](https://i.postimg.cc/HsSwBgPm/image.png)](https://postimg.cc/8j6fzqSX) 
+
+[![image.png](https://i.postimg.cc/Vv2Yk5k1/image.png)](https://postimg.cc/tnt0rq6m) 
+
+**A. Streamlit-bokeh-events: (Using Microphone)**
+
+[![image.png](https://i.postimg.cc/Jzr14w1s/image.png)](https://postimg.cc/PP7G2RvH)
+
